@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cruz Maya — Calculadora de Nacimiento</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#091410;
+  --bg2:#0f1e18;
+  --bg3:#162619;
+  --surface:#1a2e20;
+  --card:#1f3525;
+  --gold:#c8a84b;
+  --gold2:#a88835;
+  --jade:#2a8a52;
+  --jade2:#1d6438;
+  --text:#e4d9b8;
+  --muted:#8a7e5e;
+  --border:rgba(200,168,75,0.2);
+  --c-orig:#1a5a7a;
+  --c-dest:#5a1a7a;
+  --c-izq:#1a3a8a;
+  --c-der:#1a6a3a;
+  --c-nac:#7a5a0a;
+  --c-aux:#253525;
+  --c-orig-b:rgba(26,90,122,0.35);
+  --c-dest-b:rgba(90,26,122,0.35);
+  --c-izq-b:rgba(26,58,138,0.35);
+  --c-der-b:rgba(26,106,58,0.35);
+  --c-nac-b:rgba(122,90,10,0.5);
+  --c-aux-b:rgba(37,53,37,0.5);
+}
+html{scroll-behavior:smooth;}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:Georgia,serif;
+  min-height:100vh;
+  padding:2rem 1rem 4rem;
+  background-image:
+    radial-gradient(ellipse at 20% 0%, rgba(42,138,82,0.08) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 100%, rgba(200,168,75,0.05) 0%, transparent 60%);
+}
+.wrap{max-width:960px;margin:0 auto;}
+
+/* ===== HEADER ===== */
+header{text-align:center;padding:2.5rem 0 2rem;position:relative;}
+.glyph-row{display:flex;justify-content:center;gap:1.5rem;margin-bottom:1.2rem;opacity:0.5;}
+.glyph{width:28px;height:28px;position:relative;}
+.glyph svg{width:100%;height:100%;}
+h1{
+  font-size:clamp(1.6rem,4vw,2.6rem);
+  font-weight:normal;
+  letter-spacing:0.1em;
+  color:var(--gold);
+  text-shadow:0 0 40px rgba(200,168,75,0.3);
+  margin-bottom:0.3rem;
+}
+h1 span{color:var(--text);opacity:0.7;font-size:0.6em;display:block;letter-spacing:0.2em;margin-top:0.2rem;}
+.divider{height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);margin:1.5rem 0;opacity:0.4;}
+
+/* ===== INPUT SECTION ===== */
+.input-panel{
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:1.8rem 2rem;
+  margin-bottom:2rem;
+}
+.input-panel h2{font-size:1rem;letter-spacing:0.15em;color:var(--muted);font-weight:normal;margin-bottom:1.2rem;text-transform:uppercase;}
+.form-grid{display:grid;grid-template-columns:1fr 1fr auto;gap:1rem;align-items:end;}
+@media(max-width:600px){.form-grid{grid-template-columns:1fr;}}
+.field label{display:block;font-size:0.7rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+.field input{
+  width:100%;padding:10px 14px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:8px;
+  color:var(--text);
+  font-family:Georgia,serif;
+  font-size:1rem;
+}
+.field input:focus{outline:2px solid var(--gold);outline-offset:2px;border-color:transparent;}
+.field input::placeholder{color:var(--muted);}
+.field input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.5) sepia(1) saturate(2) hue-rotate(10deg);}
+.btn{
+  padding:10px 22px;
+  background:var(--jade2);
+  border:1px solid var(--jade);
+  border-radius:8px;
+  color:var(--gold);
+  font-family:Georgia,serif;
+  font-size:1rem;
+  cursor:pointer;
+  letter-spacing:0.05em;
+  transition:all 0.2s;
+  white-space:nowrap;
+}
+.btn:hover{background:var(--jade);color:#fff;}
+.btn-ghost{background:transparent;border-color:var(--border);color:var(--muted);}
+.btn-ghost:hover{background:var(--surface);color:var(--text);}
+.btn-print{
+  display:flex;align-items:center;gap:8px;
+  padding:9px 20px;
+  background:transparent;
+  border:1px solid var(--border);
+  border-radius:8px;
+  color:var(--muted);
+  font-family:Georgia,serif;
+  font-size:0.9rem;
+  cursor:pointer;
+  transition:all 0.2s;
+}
+.btn-print:hover{background:var(--surface);color:var(--text);}
+
+/* ===== RESULTS ===== */
+#results{display:none;}
+#results.visible{display:block;}
+
+/* ===== TZOLKIN IDENTITY CARD ===== */
+.identity-card{
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:1.5rem 2rem;
+  margin-bottom:1.5rem;
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  gap:1.5rem;
+  align-items:center;
+}
+@media(max-width:600px){.identity-card{grid-template-columns:1fr;}}
+.nac-circle{
+  width:80px;height:80px;
+  border-radius:50%;
+  background:var(--c-nac-b);
+  border:2px solid var(--gold);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.nac-num{font-size:2rem;color:var(--gold);line-height:1;}
+.nac-naw{font-size:0.65rem;letter-spacing:0.08em;color:var(--gold);opacity:0.8;margin-top:2px;}
+.identity-info{}
+.identity-name{font-size:1.5rem;color:var(--gold);margin-bottom:4px;}
+.identity-equiv{font-size:0.8rem;color:var(--muted);margin-bottom:6px;}
+.identity-desc{font-size:0.85rem;color:var(--text);opacity:0.8;font-style:italic;}
+.identity-meta{text-align:right;}
+.meta-item{font-size:0.75rem;color:var(--muted);margin-bottom:4px;}
+.meta-val{color:var(--text);}
+.suma-badge{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:8px 14px;
+  text-align:center;
+  margin-top:8px;
+}
+.suma-n{font-size:1.4rem;color:var(--gold);}
+.suma-l{font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);}
+
+/* ===== CRUZ GRID ===== */
+.cruz-section{margin-bottom:1.5rem;}
+.cruz-title{font-size:0.75rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-bottom:1rem;text-align:center;}
+.cruz-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:6px;
+  max-width:700px;
+  margin:0 auto;
+}
+.cell{
+  border-radius:10px;
+  padding:14px 10px 12px;
+  text-align:center;
+  border:1px solid;
+  position:relative;
+  transition:transform 0.15s;
+}
+.cell:hover{transform:translateY(-2px);}
+.cell-pos{font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;opacity:0.7;margin-bottom:8px;display:block;}
+.cell-num{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:42px;height:42px;
+  border-radius:50%;
+  font-size:1.4rem;
+  margin-bottom:8px;
+  border:1.5px solid;
+  font-weight:normal;
+}
+.cell-naw{font-size:0.95rem;letter-spacing:0.04em;margin-bottom:2px;}
+.cell-yuc{font-size:0.65rem;opacity:0.6;}
+
+/* Position-specific styles */
+.cell-nac{background:var(--c-nac-b);border-color:rgba(200,168,75,0.5);}
+.cell-nac .cell-pos{color:var(--gold);}
+.cell-nac .cell-num{background:rgba(200,168,75,0.15);border-color:var(--gold);color:var(--gold);}
+.cell-nac .cell-naw{color:var(--gold);}
+
+.cell-orig{background:var(--c-orig-b);border-color:rgba(26,90,122,0.6);}
+.cell-orig .cell-pos{color:#5ab8d8;}
+.cell-orig .cell-num{background:rgba(26,90,122,0.3);border-color:#5ab8d8;color:#5ab8d8;}
+.cell-orig .cell-naw{color:#a0d4e8;}
+
+.cell-dest{background:var(--c-dest-b);border-color:rgba(90,26,122,0.6);}
+.cell-dest .cell-pos{color:#c080e8;}
+.cell-dest .cell-num{background:rgba(90,26,122,0.3);border-color:#c080e8;color:#c080e8;}
+.cell-dest .cell-naw{color:#d0a0f0;}
+
+.cell-izq{background:var(--c-izq-b);border-color:rgba(26,58,138,0.6);}
+.cell-izq .cell-pos{color:#7090e8;}
+.cell-izq .cell-num{background:rgba(26,58,138,0.3);border-color:#7090e8;color:#7090e8;}
+.cell-izq .cell-naw{color:#a0b4f0;}
+
+.cell-der{background:var(--c-der-b);border-color:rgba(26,106,58,0.6);}
+.cell-der .cell-pos{color:#60c88a;}
+.cell-der .cell-num{background:rgba(26,106,58,0.3);border-color:#60c88a;color:#60c88a;}
+.cell-der .cell-naw{color:#90dca8;}
+
+.cell-aux{background:var(--c-aux-b);border-color:rgba(100,120,100,0.3);}
+.cell-aux .cell-pos{color:var(--muted);}
+.cell-aux .cell-num{background:rgba(50,70,50,0.4);border-color:var(--muted);color:var(--text);font-size:1.1rem;width:36px;height:36px;}
+.cell-aux .cell-naw{font-size:0.82rem;}
+.cell-aux .cell-yuc{font-size:0.6rem;}
+
+/* CROSS DECORATORS between cells */
+.cruz-connector-v{
+  grid-column:2;
+  display:flex;align-items:center;justify-content:center;
+  font-size:0.6rem;color:var(--border);
+  height:6px;
+}
+
+/* ===== POSITIONS LEGEND ===== */
+.positions-legend{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+  gap:10px;
+  margin-bottom:2rem;
+  max-width:700px;
+  margin-left:auto;margin-right:auto;
+}
+.pos-item{
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:10px 14px;
+  display:flex;gap:10px;align-items:flex-start;
+}
+.pos-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:4px;}
+.pos-dot-nac{background:var(--gold);}
+.pos-dot-orig{background:#5ab8d8;}
+.pos-dot-dest{background:#c080e8;}
+.pos-dot-izq{background:#7090e8;}
+.pos-dot-der{background:#60c88a;}
+.pos-dot-aux{background:var(--muted);}
+.pos-text{}
+.pos-label{font-size:0.75rem;color:var(--text);letter-spacing:0.05em;}
+.pos-desc{font-size:0.65rem;color:var(--muted);margin-top:2px;font-style:italic;}
+
+/* ===== NAWAL DETAIL PANEL ===== */
+.detail-section{
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:1.5rem 2rem;
+  margin-bottom:1.5rem;
+}
+.detail-section h3{font-size:0.75rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:1.2rem;font-weight:normal;}
+.nawales-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+  gap:10px;
+}
+.nawal-item{
+  background:var(--surface);
+  border-radius:8px;
+  padding:10px 12px;
+  border:1px solid var(--border);
+}
+.nawal-item-header{display:flex;gap:8px;align-items:center;margin-bottom:4px;}
+.nawal-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.nawal-item-pos{font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em;}
+.nawal-item-num{font-size:1.1rem;margin-bottom:2px;}
+.nawal-item-name{font-size:0.9rem;}
+.nawal-item-kw{font-size:0.65rem;color:var(--muted);margin-top:4px;font-style:italic;}
+
+/* ===== EXPANDED CRUZ SECTION ===== */
+.expanded-section{
+  margin-bottom:2rem;
+}
+.expanded-section h3{
+  font-size:0.75rem;letter-spacing:0.15em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:1rem;font-weight:normal;
+  text-align:center;
+}
+.expanded-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:12px;
+  max-width:900px;
+  margin:0 auto;
+}
+.sub-cruz{
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:10px;
+}
+.sub-cruz-label{
+  font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;
+  color:var(--muted);text-align:center;margin-bottom:8px;
+}
+.sub-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;}
+.sub-cell{
+  border-radius:5px;
+  padding:6px 4px;
+  text-align:center;
+  border:1px solid rgba(100,100,100,0.2);
+  background:rgba(0,0,0,0.2);
+}
+.sub-cell.sub-nac{border-color:rgba(200,168,75,0.4);background:rgba(200,168,75,0.08);}
+.sub-num{font-size:0.85rem;color:var(--muted);display:block;}
+.sub-name{font-size:0.65rem;color:var(--text);}
+.sub-nac .sub-num{color:var(--gold);}
+.sub-nac .sub-name{color:var(--gold);}
+
+/* ===== ACTION BAR ===== */
+.action-bar{
+  display:flex;flex-wrap:wrap;gap:10px;justify-content:center;
+  margin-top:2rem;margin-bottom:1rem;
+}
+
+/* ===== PRINT STYLES ===== */
+@media print {
+  @page{margin:1.5cm;size:A4;}
+  body{background:white!important;color:#1a1a1a!important;font-size:11px;padding:0;}
+  .input-panel,.action-bar,.no-print{display:none!important;}
+  header{padding:0.5rem 0 0.8rem;}
+  h1{color:#2a5a1a!important;font-size:1.4rem!important;text-shadow:none!important;}
+  h1 span{color:#555!important;}
+  .glyph-row{display:none;}
+  .divider{background:rgba(0,0,0,0.2)!important;opacity:1!important;}
+  .identity-card{
+    background:white!important;
+    border:1px solid #ccc!important;
+    padding:0.8rem!important;
+    margin-bottom:0.8rem!important;
+  }
+  .nac-circle{
+    border-color:#2a5a1a!important;
+    background:rgba(42,90,26,0.08)!important;
+  }
+  .nac-num{color:#2a5a1a!important;}
+  .nac-naw{color:#2a5a1a!important;}
+  .identity-name{color:#2a5a1a!important;}
+  .identity-equiv{color:#555!important;}
+  .identity-desc{color:#333!important;}
+  .meta-item{color:#555!important;}
+  .meta-val{color:#1a1a1a!important;}
+  .suma-badge{background:#f5f5f5!important;border-color:#ccc!important;}
+  .suma-n{color:#2a5a1a!important;}
+  .suma-l{color:#555!important;}
+  .cruz-section{margin-bottom:0.8rem;}
+  .cruz-title{color:#555!important;}
+  .cruz-grid{max-width:100%!important;gap:4px!important;}
+  .cell{
+    border-radius:6px!important;
+    padding:8px 6px!important;
+    page-break-inside:avoid;
+  }
+  .cell-nac{background:#fffbea!important;border-color:#c8a84b!important;}
+  .cell-nac .cell-pos,.cell-nac .cell-naw{color:#7a5a0a!important;}
+  .cell-nac .cell-num{background:#fff8d0!important;border-color:#c8a84b!important;color:#7a5a0a!important;}
+  .cell-orig{background:#eaf5fb!important;border-color:#1a5a7a!important;}
+  .cell-orig .cell-pos,.cell-orig .cell-naw{color:#0d4060!important;}
+  .cell-orig .cell-num{background:#d0ecf8!important;border-color:#1a5a7a!important;color:#0d4060!important;}
+  .cell-dest{background:#f5eafb!important;border-color:#5a1a7a!important;}
+  .cell-dest .cell-pos,.cell-dest .cell-naw{color:#3a0a5a!important;}
+  .cell-dest .cell-num{background:#e8d0f8!important;border-color:#5a1a7a!important;color:#3a0a5a!important;}
+  .cell-izq{background:#eaeffa!important;border-color:#1a3a8a!important;}
+  .cell-izq .cell-pos,.cell-izq .cell-naw{color:#0a2060!important;}
+  .cell-izq .cell-num{background:#d0d8f8!important;border-color:#1a3a8a!important;color:#0a2060!important;}
+  .cell-der{background:#eafaef!important;border-color:#1a6a3a!important;}
+  .cell-der .cell-pos,.cell-der .cell-naw{color:#0a4020!important;}
+  .cell-der .cell-num{background:#d0f0d8!important;border-color:#1a6a3a!important;color:#0a4020!important;}
+  .cell-aux{background:#f5f5f0!important;border-color:#aaa!important;}
+  .cell-aux .cell-pos{color:#555!important;}
+  .cell-aux .cell-num{background:#eee!important;border-color:#888!important;color:#333!important;}
+  .cell-aux .cell-naw{color:#222!important;}
+  .cell-aux .cell-yuc{color:#555!important;}
+  .cell-pos,.cell-yuc{color:#555!important;}
+  .positions-legend{display:none!important;}
+  .detail-section{
+    background:white!important;border:1px solid #ccc!important;
+    padding:0.8rem!important;margin-bottom:0.8rem!important;
+  }
+  .detail-section h3{color:#555!important;}
+  .nawal-item{background:#f9f9f5!important;border-color:#ddd!important;}
+  .nawal-item-pos{color:#555!important;}
+  .nawal-item-num{color:#1a1a1a!important;}
+  .nawal-item-name{color:#1a1a1a!important;}
+  .nawal-item-kw{color:#555!important;}
+  .expanded-section{page-break-before:always;}
+  .expanded-section h3{color:#555!important;}
+  .sub-cruz{background:white!important;border-color:#ccc!important;}
+  .sub-cruz-label{color:#555!important;}
+  .sub-cell{background:#f9f9f9!important;border-color:#ddd!important;}
+  .sub-cell.sub-nac{background:#fffbea!important;border-color:#c8a84b!important;}
+  .sub-num{color:#555!important;}
+  .sub-name{color:#1a1a1a!important;}
+  .sub-nac .sub-num,.sub-nac .sub-name{color:#7a5a0a!important;}
+  .print-footer{display:block!important;}
+}
+.print-footer{display:none;text-align:center;font-size:9px;color:#888;margin-top:1rem;border-top:1px solid #eee;padding-top:0.5rem;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- HEADER -->
+<header>
+  <div class="glyph-row">
+    <div class="glyph"><svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="4" width="20" height="20" rx="2" stroke="#c8a84b" stroke-width="1.2"/><rect x="9" y="9" width="10" height="10" rx="1" stroke="#c8a84b" stroke-width="1"/><line x1="14" y1="4" x2="14" y2="24" stroke="#c8a84b" stroke-width="0.8" opacity=".5"/><line x1="4" y1="14" x2="24" y2="14" stroke="#c8a84b" stroke-width="0.8" opacity=".5"/></svg></div>
+    <div class="glyph"><svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="14" cy="14" r="10" stroke="#c8a84b" stroke-width="1.2"/><circle cx="14" cy="14" r="4" stroke="#c8a84b" stroke-width="1"/><line x1="14" y1="4" x2="14" y2="9" stroke="#c8a84b" stroke-width="1.2"/><line x1="14" y1="19" x2="14" y2="24" stroke="#c8a84b" stroke-width="1.2"/><line x1="4" y1="14" x2="9" y2="14" stroke="#c8a84b" stroke-width="1.2"/><line x1="19" y1="14" x2="24" y2="14" stroke="#c8a84b" stroke-width="1.2"/></svg></div>
+    <div class="glyph"><svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg"><polygon points="14,3 25,21 3,21" stroke="#c8a84b" stroke-width="1.2" fill="none"/><polygon points="14,10 20,20 8,20" stroke="#c8a84b" stroke-width="0.8" fill="none" opacity=".6"/></svg></div>
+    <div class="glyph"><svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="4" width="20" height="20" rx="2" stroke="#c8a84b" stroke-width="1.2"/><rect x="9" y="9" width="10" height="10" rx="1" stroke="#c8a84b" stroke-width="1"/><line x1="14" y1="4" x2="14" y2="24" stroke="#c8a84b" stroke-width="0.8" opacity=".5"/><line x1="4" y1="14" x2="24" y2="14" stroke="#c8a84b" stroke-width="0.8" opacity=".5"/></svg></div>
+  </div>
+  <h1>Cruz Maya<span>Calculadora de Nacimiento Tzolkin</span></h1>
+</header>
+<div class="divider"></div>
+
+<!-- INPUT PANEL -->
+<div class="input-panel no-print">
+  <h2>Ingresa los datos de nacimiento</h2>
+  <div class="form-grid">
+    <div class="field">
+      <label for="nombre">Nombre</label>
+      <input type="text" id="nombre" placeholder="Nombre completo (opcional)">
+    </div>
+    <div class="field">
+      <label for="fecha">Fecha de Nacimiento</label>
+      <input type="date" id="fecha" min="1900-01-01" max="2099-12-31">
+    </div>
+    <button class="btn" onclick="calcular()">Calcular Cruz</button>
+  </div>
+</div>
+
+<!-- RESULTS -->
+<div id="results">
+
+  <!-- Identity Card -->
+  <div class="identity-card" id="identityCard">
+    <div class="nac-circle">
+      <div class="nac-num" id="ic-num">—</div>
+      <div class="nac-naw" id="ic-naw-short">—</div>
+    </div>
+    <div class="identity-info">
+      <div class="identity-name" id="ic-name">—</div>
+      <div class="identity-equiv" id="ic-equiv">—</div>
+      <div class="identity-desc" id="ic-desc">—</div>
+    </div>
+    <div class="identity-meta">
+      <div class="meta-item">Fecha: <span class="meta-val" id="ic-fecha">—</span></div>
+      <div class="meta-item">Persona: <span class="meta-val" id="ic-persona">—</span></div>
+      <div class="suma-badge">
+        <div class="suma-n" id="ic-suma">—</div>
+        <div class="suma-l">Suma de energías</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cruz Grid -->
+  <div class="cruz-section">
+    <div class="cruz-title">Cruz Maya — Energías de Vida</div>
+    <div class="cruz-grid" id="cruzGrid">
+      <!-- Generated by JS -->
+    </div>
+  </div>
+
+  <!-- Positions Legend -->
+  <div class="positions-legend no-print">
+    <div class="pos-item"><div class="pos-dot pos-dot-nac"></div><div class="pos-text"><div class="pos-label">Nacimiento</div><div class="pos-desc">Esencia y personalidad</div></div></div>
+    <div class="pos-item"><div class="pos-dot pos-dot-orig"></div><div class="pos-text"><div class="pos-label">Origen (−9)</div><div class="pos-desc">Raíces, de dónde vienes</div></div></div>
+    <div class="pos-item"><div class="pos-dot pos-dot-dest"></div><div class="pos-text"><div class="pos-label">Destino (+9)</div><div class="pos-desc">Misión de vida</div></div></div>
+    <div class="pos-item"><div class="pos-dot pos-dot-izq"></div><div class="pos-text"><div class="pos-label">Izquierda (−7)</div><div class="pos-desc">Lo femenino, desafíos</div></div></div>
+    <div class="pos-item"><div class="pos-dot pos-dot-der"></div><div class="pos-text"><div class="pos-label">Derecha (+7)</div><div class="pos-desc">Lo masculino, dones</div></div></div>
+    <div class="pos-item"><div class="pos-dot pos-dot-aux"></div><div class="pos-text"><div class="pos-label">Auxiliares</div><div class="pos-desc">Energías de soporte</div></div></div>
+  </div>
+
+  <!-- Nawal Detail Panel -->
+  <div class="detail-section">
+    <h3>Descripción de los Nawales Principales</h3>
+    <div class="nawales-grid" id="nawalesGrid"><!-- Generated by JS --></div>
+  </div>
+
+  <!-- Expanded Cruz Section -->
+  <div class="expanded-section" id="expandedSection">
+    <h3>Cruz Expandida — Sub-Cruces de las 9 Posiciones</h3>
+    <div class="expanded-grid" id="expandedGrid"><!-- Generated by JS --></div>
+  </div>
+
+  <!-- Action Bar -->
+  <div class="action-bar no-print">
+    <button class="btn btn-ghost" onclick="resetForm()">← Nueva consulta</button>
+    <button class="btn-print" onclick="window.print()">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 5V2h8v3M4 12H2V7h12v5h-2M4 10h8v4H4v-4z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+      Imprimir / Guardar PDF
+    </button>
+  </div>
+
+</div><!-- /results -->
+
+<div class="print-footer" id="printFooter"></div>
+
+</div><!-- /wrap -->
+
+<script>
+// ============================================================
+//  DATOS DE LOS 20 NAWALES
+// ============================================================
+const NAWALES = [
+  { k:"Tijax",    y:"Etz'nab",      n:"Tecpatl",      elem:"Fuego",  dir:"Este",   kw:"Obsidiana · Verdad · Medicina",        desc:"Nawal de la obsidiana y el bisturí espiritual. Portador de luz y corte de lo que ya no sirve." },
+  { k:"Kawoq",   y:"Cauac",        n:"Quiahuitl",    elem:"Agua",   dir:"Sur",    kw:"Tormenta · Familia · Comunidad",       desc:"Nawal de la tormenta y el rayo. Guardián de la familia y la comunidad." },
+  { k:"Ajpu",    y:"Ahau",         n:"Xochitl",      elem:"Fuego",  dir:"Este",   kw:"Sol · Héroe · Florescencia",           desc:"Nawal del sol y el cazador héroe. Energía de plenitud y trascendencia." },
+  { k:"Imox",    y:"Imix",         n:"Cipactli",     elem:"Agua",   dir:"Este",   kw:"Creatividad · Inicio · Intuición",     desc:"Primer nawal del Tzolkin. Representa la mano izquierda y la creatividad sin límites." },
+  { k:"Iq'",     y:"Ik'",          n:"Ehecatl",      elem:"Aire",   dir:"Norte",  kw:"Viento · Aliento · Comunicación",     desc:"Nawal del viento y la respiración. Portador de mensajes divinos y la palabra sagrada." },
+  { k:"Aq'ab'al",y:"Ak'bal",       n:"Calli",        elem:"Tierra", dir:"Oeste",  kw:"Amanecer · Dualidad · Hogar",         desc:"Nawal del umbral entre la noche y el alba. Maestro del equilibrio y los opuestos." },
+  { k:"K'at",    y:"K'an",         n:"Cuetzpallin",  elem:"Fuego",  dir:"Sur",    kw:"Red · Abundancia · Desafío",          desc:"Nawal de la red y la abundancia. Puede traer enredos o libertad según se trabaje." },
+  { k:"Kan",     y:"Chikchan",     n:"Coatl",        elem:"Fuego",  dir:"Este",   kw:"Serpiente · Conocimiento · Energía",  desc:"Nawal de la serpiente y la energía kundalini. Guardián del conocimiento sagrado." },
+  { k:"Keme",    y:"Kimi",         n:"Miquiztli",    elem:"Agua",   dir:"Sur",    kw:"Muerte · Transformación · Ancestros", desc:"Nawal de la muerte y la transformación. Mensajero de los antepasados y el inframundo." },
+  { k:"Keej",    y:"Manik'",       n:"Mazatl",       elem:"Tierra", dir:"Oeste",  kw:"Venado · Bastón · Autoridad",        desc:"Nawal del venado y el bastón de mando. Portador de autoridad y gracia espiritual." },
+  { k:"Q'anil",  y:"Lamat",        n:"Tochtli",      elem:"Fuego",  dir:"Sur",    kw:"Semilla · Conejo · Germinación",     desc:"Nawal de la semilla y la luna. Energía de multiplicación y abundancia material." },
+  { k:"Toj",     y:"Muluk",        n:"Atl",          elem:"Agua",   dir:"Norte",  kw:"Ofrenda · Agua · Pago",              desc:"Nawal del agua sagrada y el pago. Maestro de ofrendas y equilibrio cósmico." },
+  { k:"T'zi'",   y:"Ok",           n:"Itzcuintli",   elem:"Tierra", dir:"Este",   kw:"Perro · Ley · Lealtad",              desc:"Nawal del perro guardián y la justicia divina. Portador de lealtad y autoridad." },
+  { k:"B'atz'",  y:"Chuwen",       n:"Ozomatli",     elem:"Aire",   dir:"Norte",  kw:"Mono · Hilo del Tiempo · Arte",      desc:"Nawal del mono y el tejedor del tiempo. Maestro de las artes y la continuidad." },
+  { k:"E",       y:"Eb'",          n:"Malinalli",    elem:"Tierra", dir:"Sur",    kw:"Camino · Viaje · Destino",           desc:"Nawal del camino y los viajeros. Guía del destino y las rutas de la vida." },
+  { k:"Aj",      y:"B'en",         n:"Acatl",        elem:"Aire",   dir:"Este",   kw:"Caña · Hogar · Autoridad",           desc:"Nawal de la caña y el bastón. Guardián del hogar y la autoridad ancestral." },
+  { k:"I'x",     y:"Ix",           n:"Ocelotl",      elem:"Tierra", dir:"Norte",  kw:"Jaguar · Magia · Poder femenino",   desc:"Nawal del jaguar y la magia. Guardián de lugares sagrados y la fuerza interior." },
+  { k:"Tz'ikin", y:"Men",          n:"Cuauhtli",     elem:"Aire",   dir:"Oeste",  kw:"Águila · Visión · Fortuna",          desc:"Nawal del águila y el pájaro. Mensajero de los dioses y buscador de fortuna." },
+  { k:"Ajmaq",   y:"Kib'",         n:"Cozcacuauhtl", elem:"Tierra", dir:"Oeste",  kw:"Perdón · Sabiduría · Ancestros",    desc:"Nawal del perdón y la conciencia ancestral. Portador de la sabiduría de los abuelos." },
+  { k:"No'j",    y:"Kab'an",       n:"Ollin",        elem:"Tierra", dir:"Norte",  kw:"Mente · Pensamiento · Inteligencia", desc:"Nawal del pensamiento y el movimiento. Maestro de la mente y la inteligencia." }
+];
+
+// ============================================================
+//  POSICIONES DE LA CRUZ
+// ============================================================
+const POSITIONS = [
+  { id:"auxDerOrig", label:"Aux. Der. Origen",  numOff:12, nameOff:6,  cls:"cell-aux" },
+  { id:"origen",     label:"Origen (−9)",        numOff:5,  nameOff:12, cls:"cell-orig" },
+  { id:"auxIzqOrig", label:"Aux. Izq. Origen",  numOff:11, nameOff:18, cls:"cell-aux" },
+  { id:"der",        label:"Derecha (+7)",       numOff:7,  nameOff:14, cls:"cell-der" },
+  { id:"nac",        label:"Nacimiento",         numOff:0,  nameOff:0,  cls:"cell-nac" },
+  { id:"izq",        label:"Izquierda (−7)",     numOff:6,  nameOff:6,  cls:"cell-izq" },
+  { id:"auxDerDest", label:"Aux. Der. Destino",  numOff:2,  nameOff:2,  cls:"cell-aux" },
+  { id:"destino",    label:"Destino (+9)",       numOff:8,  nameOff:8,  cls:"cell-dest" },
+  { id:"auxIzqDest", label:"Aux. Izq. Destino", numOff:1,  nameOff:14, cls:"cell-aux" },
+];
+
+// ============================================================
+//  ALGORITMO DE CÁLCULO
+// ============================================================
+function daysFromBase(year, month, day) {
+  // Days from 1900-01-01 (which is day 0)
+  const base = Date.UTC(1900, 0, 1);
+  const target = Date.UTC(year, month - 1, day);
+  return (target - base) / 86400000;
+}
+
+function calcDay(D) {
+  const num = (((3 + D) % 13) + 13) % 13 + 1;
+  const nameIdx = (((D % 20) + 20) % 20);
+  return { num, nameIdx, ...NAWALES[nameIdx] };
+}
+
+function applyOffset(baseNum, baseNameIdx, numOff, nameOff) {
+  const num = (((baseNum - 1 + numOff) % 13) + 13) % 13 + 1;
+  const nameIdx = ((baseNameIdx + nameOff) % 20 + 20) % 20;
+  return { num, nameIdx, ...NAWALES[nameIdx] };
+}
+
+function calcCruz(year, month, day) {
+  const D = daysFromBase(year, month, day);
+  const nac = calcDay(D);
+  const cruz = {};
+  for (const pos of POSITIONS) {
+    cruz[pos.id] = applyOffset(nac.num, nac.nameIdx, pos.numOff, pos.nameOff);
+  }
+  const suma = Object.values(cruz).reduce((s, p) => s + p.num, 0);
+  return { cruz, suma, nac };
+}
+
+// ============================================================
+//  UI HELPERS
+// ============================================================
+function formatDate(y, m, d) {
+  const months = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+  return `${d} de ${months[m-1]} de ${y}`;
+}
+
+function makeCellHTML(pos, data, size = 'full') {
+  const isAux = pos.cls === 'cell-aux';
+  const circleStyle = isAux ? 'style="width:36px;height:36px;font-size:1.1rem;"' : '';
+  return `<div class="cell ${pos.cls}">
+    <span class="cell-pos">${pos.label}</span>
+    <div class="cell-num" ${circleStyle}>${data.num}</div>
+    <div class="cell-naw">${data.k}</div>
+    <div class="cell-yuc">${data.y} · ${data.n}</div>
+  </div>`;
+}
+
+function makeSubCruzHTML(centerPos, centerData) {
+  // Build a mini Cruz for a given center position
+  const subPosLabel = [
+    {numOff:5,nameOff:12},{numOff:0,nameOff:0},{numOff:11,nameOff:18},
+    {numOff:7,nameOff:14},{numOff:0,nameOff:0},{numOff:6,nameOff:6},
+    {numOff:2,nameOff:2},{numOff:8,nameOff:8},{numOff:1,nameOff:14}
+  ];
+  const isCenter = [false,false,false,false,true,false,false,false,false];
+  const cells = subPosLabel.map((off, i) => {
+    const d = applyOffset(centerData.num, centerData.nameIdx, off.numOff, off.nameOff);
+    const nacCls = isCenter[i] ? ' sub-nac' : '';
+    return `<div class="sub-cell${nacCls}">
+      <span class="sub-num">${d.num}</span>
+      <span class="sub-name">${d.k}</span>
+    </div>`;
+  });
+  return `<div class="sub-cruz">
+    <div class="sub-cruz-label">${centerPos.label}<br><small style="opacity:.7">${centerData.num} ${centerData.k}</small></div>
+    <div class="sub-grid">${cells.join('')}</div>
+  </div>`;
+}
+
+// ============================================================
+//  MAIN CALCULATE FUNCTION
+// ============================================================
+function calcular() {
+  const fechaStr = document.getElementById('fecha').value;
+  const nombre = document.getElementById('nombre').value.trim() || 'Sin nombre';
+
+  if (!fechaStr) {
+    alert('Por favor ingresa una fecha de nacimiento.');
+    return;
+  }
+
+  const [y, m, d] = fechaStr.split('-').map(Number);
+  const { cruz, suma, nac } = calcCruz(y, m, d);
+
+  // ---- Identity Card ----
+  document.getElementById('ic-num').textContent = nac.num;
+  document.getElementById('ic-naw-short').textContent = nac.k;
+  document.getElementById('ic-name').textContent = `${nac.num} ${nac.k}`;
+  document.getElementById('ic-equiv').textContent = `${nac.y} (Yucateco) · ${nac.n} (Nahuatl) · ${nac.elem} · ${nac.dir}`;
+  document.getElementById('ic-desc').textContent = nac.desc;
+  document.getElementById('ic-fecha').textContent = formatDate(y, m, d);
+  document.getElementById('ic-persona').textContent = nombre;
+  document.getElementById('ic-suma').textContent = suma;
+
+  // ---- Cruz Grid ----
+  const gridEl = document.getElementById('cruzGrid');
+  gridEl.innerHTML = POSITIONS.map(pos => makeCellHTML(pos, cruz[pos.id])).join('');
+
+  // ---- Nawal Details ----
+  const mainPositions = [
+    { id:'nac',     label:'Nacimiento', dotCls:'pos-dot-nac'  },
+    { id:'origen',  label:'Origen',     dotCls:'pos-dot-orig' },
+    { id:'destino', label:'Destino',    dotCls:'pos-dot-dest' },
+    { id:'izq',     label:'Izquierda',  dotCls:'pos-dot-izq'  },
+    { id:'der',     label:'Derecha',    dotCls:'pos-dot-der'  },
+  ];
+  const nawGridEl = document.getElementById('nawalesGrid');
+  nawGridEl.innerHTML = mainPositions.map(mp => {
+    const data = cruz[mp.id];
+    return `<div class="nawal-item">
+      <div class="nawal-item-header">
+        <div class="nawal-dot ${mp.dotCls}"></div>
+        <span class="nawal-item-pos" style="color:var(--muted);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;">${mp.label}</span>
+      </div>
+      <div class="nawal-item-num" style="color:var(--gold)">${data.num} <span style="font-size:.7rem;color:var(--muted)">${data.elem} · ${data.dir}</span></div>
+      <div class="nawal-item-name">${data.k}</div>
+      <div class="nawal-item-kw">${data.kw}</div>
+      <div style="font-size:.65rem;color:var(--muted);margin-top:5px;font-style:italic;line-height:1.4;">${data.desc}</div>
+    </div>`;
+  }).join('');
+
+  // ---- Expanded Cruz ----
+  const expGridEl = document.getElementById('expandedGrid');
+  expGridEl.innerHTML = POSITIONS.map(pos => makeSubCruzHTML(pos, cruz[pos.id])).join('');
+
+  // ---- Print footer ----
+  document.getElementById('printFooter').textContent =
+    `Cruz Maya · ${nombre} · ${formatDate(y, m, d)} · Nacimiento: ${nac.num} ${nac.k} (${nac.y}) · Suma: ${suma}`;
+
+  // ---- Show results ----
+  const resultsEl = document.getElementById('results');
+  resultsEl.classList.add('visible');
+  resultsEl.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+function resetForm() {
+  document.getElementById('results').classList.remove('visible');
+  document.getElementById('fecha').value = '';
+  document.getElementById('nombre').value = '';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Prefill today's date
+(function() {
+  const today = new Date();
+  const yy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const dd = String(today.getDate()).padStart(2, '0');
+  document.getElementById('fecha').value = `${yy}-${mm}-${dd}`;
+})();
+
+// Allow Enter key to trigger calculation
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('fecha').value) calcular();
+});
+</script>
+</body>
+</html>
