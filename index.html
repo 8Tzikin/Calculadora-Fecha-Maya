@@ -417,7 +417,7 @@ h1 span{color:var(--text);opacity:0.7;font-size:0.6em;display:block;letter-spaci
 </style>
 </head>
 <body>
-<div class="wrap">
+<div class="wrap" role="main">
 
 <!-- HEADER -->
 <header>
@@ -434,21 +434,21 @@ h1 span{color:var(--text);opacity:0.7;font-size:0.6em;display:block;letter-spaci
 <!-- INPUT PANEL -->
 <div class="input-panel no-print">
   <h2>Ingresa los datos de nacimiento</h2>
-  <div class="form-grid">
+  <div class="form-grid" role="group" aria-label="Formulario de cálculo de Cruz Maya">
     <div class="field">
       <label for="nombre">Nombre</label>
-      <input type="text" id="nombre" placeholder="Nombre completo (opcional)">
+      <input type="text" id="nombre" placeholder="Nombre completo (opcional)" aria-label="Nombre completo (opcional)" autocomplete="name">
     </div>
     <div class="field">
       <label for="fecha">Fecha de Nacimiento</label>
-      <input type="date" id="fecha" min="1900-01-01" max="2099-12-31">
+      <input type="date" id="fecha" min="1900-01-01" max="2099-12-31" aria-required="true" aria-label="Fecha de nacimiento, entre 1900 y 2099">
     </div>
-    <button class="btn" onclick="calcular()">Calcular Cruz</button>
+    <button type="button" class="btn" onclick="calcular()" aria-label="Calcular Cruz Maya">Calcular Cruz</button>
   </div>
 </div>
 
 <!-- RESULTS -->
-<div id="results">
+<div id="results" aria-live="polite" aria-atomic="true">
 
   <!-- Identity Card -->
   <div class="identity-card" id="identityCard">
@@ -503,8 +503,8 @@ h1 span{color:var(--text);opacity:0.7;font-size:0.6em;display:block;letter-spaci
 
   <!-- Action Bar -->
   <div class="action-bar no-print">
-    <button class="btn btn-ghost" onclick="resetForm()">← Nueva consulta</button>
-    <button class="btn-print" onclick="window.print()">
+    <button type="button" class="btn btn-ghost" onclick="resetForm()" aria-label="Volver al formulario">← Nueva consulta</button>
+    <button type="button" class="btn-print" onclick="window.print()" aria-label="Imprimir o guardar como PDF">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 5V2h8v3M4 12H2V7h12v5h-2M4 10h8v4H4v-4z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
       Imprimir / Guardar PDF
     </button>
@@ -517,6 +517,12 @@ h1 span{color:var(--text);opacity:0.7;font-size:0.6em;display:block;letter-spaci
 </div><!-- /wrap -->
 
 <script>
+// ============================================================
+//  CONSTANTES DEL TZOLKIN
+// ============================================================
+const TZOLKIN_NUMBERS = 13; // Números del 1 al 13
+const TZOLKIN_DAYS    = 20; // 20 Nawales del ciclo sagrado
+
 // ============================================================
 //  DATOS DE LOS 20 NAWALES
 // ============================================================
@@ -565,18 +571,18 @@ function daysFromBase(year, month, day) {
   // Days from 1900-01-01 (which is day 0)
   const base = Date.UTC(1900, 0, 1);
   const target = Date.UTC(year, month - 1, day);
-  return (target - base) / 86400000;
+  return Math.floor((target - base) / 86400000);
 }
 
 function calcDay(D) {
-  const num = (((3 + D) % 13) + 13) % 13 + 1;
-  const nameIdx = (((D % 20) + 20) % 20);
+  const num = (((3 + D) % TZOLKIN_NUMBERS) + TZOLKIN_NUMBERS) % TZOLKIN_NUMBERS + 1;
+  const nameIdx = (((D % TZOLKIN_DAYS) + TZOLKIN_DAYS) % TZOLKIN_DAYS);
   return { num, nameIdx, ...NAWALES[nameIdx] };
 }
 
 function applyOffset(baseNum, baseNameIdx, numOff, nameOff) {
-  const num = (((baseNum - 1 + numOff) % 13) + 13) % 13 + 1;
-  const nameIdx = ((baseNameIdx + nameOff) % 20 + 20) % 20;
+  const num = (((baseNum - 1 + numOff) % TZOLKIN_NUMBERS) + TZOLKIN_NUMBERS) % TZOLKIN_NUMBERS + 1;
+  const nameIdx = ((baseNameIdx + nameOff) % TZOLKIN_DAYS + TZOLKIN_DAYS) % TZOLKIN_DAYS;
   return { num, nameIdx, ...NAWALES[nameIdx] };
 }
 
@@ -641,6 +647,11 @@ function calcular() {
 
   if (!fechaStr) {
     alert('Por favor ingresa una fecha de nacimiento.');
+    return;
+  }
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaStr)) {
+    alert('Formato de fecha inválido. Se espera AAAA-MM-DD.');
     return;
   }
 
