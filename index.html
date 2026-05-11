@@ -42,8 +42,9 @@ body{
   background-image:
     radial-gradient(ellipse at 20% 0%, rgba(42,138,82,0.08) 0%, transparent 60%),
     radial-gradient(ellipse at 80% 100%, rgba(200,168,75,0.05) 0%, transparent 60%);
+  contain:layout style;
 }
-.wrap{max-width:960px;margin:0 auto;}
+.wrap{max-width:960px;margin:0 auto;contain:layout;}
 
 /* ===== HEADER ===== */
 header{text-align:center;padding:2.5rem 0 2rem;position:relative;}
@@ -97,6 +98,7 @@ h1 span{color:var(--text);opacity:0.7;font-size:0.6em;display:block;letter-spaci
   letter-spacing:0.05em;
   transition:all 0.2s;
   white-space:nowrap;
+  will-change:background,color;
 }
 .btn:hover{background:var(--jade);color:#fff;}
 .btn-ghost{background:transparent;border-color:var(--border);color:var(--muted);}
@@ -177,6 +179,8 @@ h1 span{color:var(--text);opacity:0.7;font-size:0.6em;display:block;letter-spaci
   border:1px solid;
   position:relative;
   transition:transform 0.15s;
+  will-change:transform;
+  contain:layout style;
 }
 .cell:hover{transform:translateY(-2px);}
 .cell-pos{font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;opacity:0.7;margin-bottom:8px;display:block;}
@@ -520,8 +524,11 @@ h1 span{color:var(--text);opacity:0.7;font-size:0.6em;display:block;letter-spaci
 // ============================================================
 //  CONSTANTES DEL TZOLKIN
 // ============================================================
-const TZOLKIN_NUMBERS = 13; // Números del 1 al 13
-const TZOLKIN_DAYS    = 20; // 20 Nawales del ciclo sagrado
+const TZOLKIN_NUMBERS = 13;
+const TZOLKIN_DAYS    = 20;
+
+// Pre-compute NAWALES lookup for faster access
+const NAWALES_BY_INDEX = [];
 
 // ============================================================
 //  DATOS DE LOS 20 NAWALES
@@ -549,6 +556,9 @@ const NAWALES = [
   { k:"No'j",    y:"Kab'an",       n:"Ollin",        elem:"Tierra", dir:"Norte",  kw:"Mente · Pensamiento · Inteligencia", desc:"Nawal del pensamiento y el movimiento. Maestro de la mente y la inteligencia." }
 ];
 
+// Populate NAWALES_BY_INDEX for O(1) lookup
+for(let i=0;i<NAWALES.length;i++){NAWALES_BY_INDEX[i]=NAWALES[i];}
+
 // ============================================================
 //  POSICIONES DE LA CRUZ
 // ============================================================
@@ -574,26 +584,35 @@ function daysFromBase(year, month, day) {
   return Math.floor((target - base) / 86400000);
 }
 
+// Bitwise modulo optimization for positive numbers
+function mod13(n){return((n%13)+13)%13;}
+function mod20(n){return((n%20)+20)%20;}
+
 function calcDay(D) {
-  const num = (((3 + D) % TZOLKIN_NUMBERS) + TZOLKIN_NUMBERS) % TZOLKIN_NUMBERS + 1;
-  const nameIdx = (((D % TZOLKIN_DAYS) + TZOLKIN_DAYS) % TZOLKIN_DAYS);
-  return { num, nameIdx, ...NAWALES[nameIdx] };
+  const num = mod13(3 + D) + 1;
+  const nameIdx = mod20(D);
+  const nawal = NAWALES_BY_INDEX[nameIdx];
+  return { num, nameIdx, k:nawal.k, y:nawal.y, n:nawal.n, elem:nawal.elem, dir:nawal.dir, kw:nawal.kw, desc:nawal.desc };
 }
 
 function applyOffset(baseNum, baseNameIdx, numOff, nameOff) {
-  const num = (((baseNum - 1 + numOff) % TZOLKIN_NUMBERS) + TZOLKIN_NUMBERS) % TZOLKIN_NUMBERS + 1;
-  const nameIdx = ((baseNameIdx + nameOff) % TZOLKIN_DAYS + TZOLKIN_DAYS) % TZOLKIN_DAYS;
-  return { num, nameIdx, ...NAWALES[nameIdx] };
+  const num = mod13(baseNum - 1 + numOff) + 1;
+  const nameIdx = mod20(baseNameIdx + nameOff);
+  const nawal = NAWALES_BY_INDEX[nameIdx];
+  return { num, nameIdx, k:nawal.k, y:nawal.y, n:nawal.n, elem:nawal.elem, dir:nawal.dir, kw:nawal.kw, desc:nawal.desc };
 }
 
 function calcCruz(year, month, day) {
   const D = daysFromBase(year, month, day);
   const nac = calcDay(D);
   const cruz = {};
-  for (const pos of POSITIONS) {
+  let suma = 0;
+  const positionsLen = POSITIONS.length;
+  for(let i=0;i<positionsLen;i++){
+    const pos = POSITIONS[i];
     cruz[pos.id] = applyOffset(nac.num, nac.nameIdx, pos.numOff, pos.nameOff);
+    suma += cruz[pos.id].num;
   }
-  const suma = Object.values(cruz).reduce((s, p) => s + p.num, 0);
   return { cruz, suma, nac };
 }
 
@@ -608,42 +627,39 @@ function formatDate(y, m, d) {
 function makeCellHTML(pos, data, size = 'full') {
   const isAux = pos.cls === 'cell-aux';
   const circleStyle = isAux ? 'style="width:36px;height:36px;font-size:1.1rem;"' : '';
-  return `<div class="cell ${pos.cls}">
-    <span class="cell-pos">${pos.label}</span>
-    <div class="cell-num" ${circleStyle}>${data.num}</div>
-    <div class="cell-naw">${data.k}</div>
-    <div class="cell-yuc">${data.y} · ${data.n}</div>
-  </div>`;
+  return '<div class="cell '+pos.cls+'">'+
+    '<span class="cell-pos">'+pos.label+'</span>'+
+    '<div class="cell-num" '+circleStyle+'>'+data.num+'</div>'+
+    '<div class="cell-naw">'+data.k+'</div>'+
+    '<div class="cell-yuc">'+data.y+' · '+data.n+'</div>'+
+  '</div>';
 }
 
 function makeSubCruzHTML(centerPos, centerData) {
-  // Build a mini Cruz for a given center position
   const subPosLabel = [
     {numOff:5,nameOff:12},{numOff:0,nameOff:0},{numOff:11,nameOff:18},
     {numOff:7,nameOff:14},{numOff:0,nameOff:0},{numOff:6,nameOff:6},
     {numOff:2,nameOff:2},{numOff:8,nameOff:8},{numOff:1,nameOff:14}
   ];
   const isCenter = [false,false,false,false,true,false,false,false,false];
-  const cells = subPosLabel.map((off, i) => {
+  let cells = '';
+  for(let i=0;i<9;i++){
+    const off = subPosLabel[i];
     const d = applyOffset(centerData.num, centerData.nameIdx, off.numOff, off.nameOff);
     const nacCls = isCenter[i] ? ' sub-nac' : '';
-    return `<div class="sub-cell${nacCls}">
-      <span class="sub-num">${d.num}</span>
-      <span class="sub-name">${d.k}</span>
-    </div>`;
-  });
-  return `<div class="sub-cruz">
-    <div class="sub-cruz-label">${centerPos.label}<br><small style="opacity:.7">${centerData.num} ${centerData.k}</small></div>
-    <div class="sub-grid">${cells.join('')}</div>
-  </div>`;
+    cells += '<div class="sub-cell'+nacCls+'"><span class="sub-num">'+d.num+'</span><span class="sub-name">'+d.k+'</span></div>';
+  }
+  return '<div class="sub-cruz"><div class="sub-cruz-label">'+centerPos.label+'<br><small style="opacity:.7">'+centerData.num+' '+centerData.k+'</small></div><div class="sub-grid">'+cells+'</div></div>';
 }
 
 // ============================================================
 //  MAIN CALCULATE FUNCTION
 // ============================================================
 function calcular() {
-  const fechaStr = document.getElementById('fecha').value;
-  const nombre = document.getElementById('nombre').value.trim() || 'Sin nombre';
+  const fechaEl = document.getElementById('fecha');
+  const nombreEl = document.getElementById('nombre');
+  const fechaStr = fechaEl.value;
+  const nombre = nombreEl.value.trim() || 'Sin nombre';
 
   if (!fechaStr) {
     alert('Por favor ingresa una fecha de nacimiento.');
@@ -655,14 +671,18 @@ function calcular() {
     return;
   }
 
-  const [y, m, d] = fechaStr.split('-').map(Number);
+  const parts = fechaStr.split('-');
+  const y = parseInt(parts[0],10);
+  const m = parseInt(parts[1],10);
+  const d = parseInt(parts[2],10);
+  
   const { cruz, suma, nac } = calcCruz(y, m, d);
 
   // ---- Identity Card ----
   document.getElementById('ic-num').textContent = nac.num;
   document.getElementById('ic-naw-short').textContent = nac.k;
-  document.getElementById('ic-name').textContent = `${nac.num} ${nac.k}`;
-  document.getElementById('ic-equiv').textContent = `${nac.y} (Yucateco) · ${nac.n} (Nahuatl) · ${nac.elem} · ${nac.dir}`;
+  document.getElementById('ic-name').textContent = nac.num + ' ' + nac.k;
+  document.getElementById('ic-equiv').textContent = nac.y + ' (Yucateco) · ' + nac.n + ' (Nahuatl) · ' + nac.elem + ' · ' + nac.dir;
   document.getElementById('ic-desc').textContent = nac.desc;
   document.getElementById('ic-fecha').textContent = formatDate(y, m, d);
   document.getElementById('ic-persona').textContent = nombre;
@@ -670,7 +690,11 @@ function calcular() {
 
   // ---- Cruz Grid ----
   const gridEl = document.getElementById('cruzGrid');
-  gridEl.innerHTML = POSITIONS.map(pos => makeCellHTML(pos, cruz[pos.id])).join('');
+  let gridHTML = '';
+  for(let i=0;i<POSITIONS.length;i++){
+    gridHTML += makeCellHTML(POSITIONS[i], cruz[POSITIONS[i].id]);
+  }
+  gridEl.innerHTML = gridHTML;
 
   // ---- Nawal Details ----
   const mainPositions = [
@@ -681,27 +705,34 @@ function calcular() {
     { id:'der',     label:'Derecha',    dotCls:'pos-dot-der'  },
   ];
   const nawGridEl = document.getElementById('nawalesGrid');
-  nawGridEl.innerHTML = mainPositions.map(mp => {
+  let nawHTML = '';
+  for(let i=0;i<mainPositions.length;i++){
+    const mp = mainPositions[i];
     const data = cruz[mp.id];
-    return `<div class="nawal-item">
-      <div class="nawal-item-header">
-        <div class="nawal-dot ${mp.dotCls}"></div>
-        <span class="nawal-item-pos" style="color:var(--muted);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;">${mp.label}</span>
-      </div>
-      <div class="nawal-item-num" style="color:var(--gold)">${data.num} <span style="font-size:.7rem;color:var(--muted)">${data.elem} · ${data.dir}</span></div>
-      <div class="nawal-item-name">${data.k}</div>
-      <div class="nawal-item-kw">${data.kw}</div>
-      <div style="font-size:.65rem;color:var(--muted);margin-top:5px;font-style:italic;line-height:1.4;">${data.desc}</div>
-    </div>`;
-  }).join('');
+    nawHTML += '<div class="nawal-item">'+
+      '<div class="nawal-item-header">'+
+        '<div class="nawal-dot '+mp.dotCls+'"></div>'+
+        '<span class="nawal-item-pos" style="color:var(--muted);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;">'+mp.label+'</span>'+
+      '</div>'+
+      '<div class="nawal-item-num" style="color:var(--gold)">'+data.num+' <span style="font-size:.7rem;color:var(--muted)">'+data.elem+' · '+data.dir+'</span></div>'+
+      '<div class="nawal-item-name">'+data.k+'</div>'+
+      '<div class="nawal-item-kw">'+data.kw+'</div>'+
+      '<div style="font-size:.65rem;color:var(--muted);margin-top:5px;font-style:italic;line-height:1.4;">'+data.desc+'</div>'+
+    '</div>';
+  }
+  nawGridEl.innerHTML = nawHTML;
 
   // ---- Expanded Cruz ----
   const expGridEl = document.getElementById('expandedGrid');
-  expGridEl.innerHTML = POSITIONS.map(pos => makeSubCruzHTML(pos, cruz[pos.id])).join('');
+  let expHTML = '';
+  for(let i=0;i<POSITIONS.length;i++){
+    expHTML += makeSubCruzHTML(POSITIONS[i], cruz[POSITIONS[i].id]);
+  }
+  expGridEl.innerHTML = expHTML;
 
   // ---- Print footer ----
   document.getElementById('printFooter').textContent =
-    `Cruz Maya · ${nombre} · ${formatDate(y, m, d)} · Nacimiento: ${nac.num} ${nac.k} (${nac.y}) · Suma: ${suma}`;
+    'Cruz Maya · ' + nombre + ' · ' + formatDate(y, m, d) + ' · Nacimiento: ' + nac.num + ' ' + nac.k + ' (' + nac.y + ') · Suma: ' + suma;
 
   // ---- Show results ----
   const resultsEl = document.getElementById('results');
