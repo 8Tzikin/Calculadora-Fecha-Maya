@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora de Cruz Maya | Conoce tu Energía Ancestral</title>
-    <meta name="description" content="Calcula tu signo del calendario sagrado Tzolkin y descubre tu energía ancestral según la cultura Maya.">
+    <title>Cruz Maya — Calculadora de Nacimiento Tzolkin</title>
+    <meta name="description" content="Calcula tu Cruz Maya según el calendario sagrado Tzolkin. Herramienta gratuita y precisa basada en la cultura Maya.">
     <style>
         :root {
             --primary: #D4AF37;
@@ -19,6 +19,7 @@
             --bg-color: #1a1a1a;
             --text-color: #e0e0e0;
             --card-bg: #2d2d2d;
+            --shadow: 0 4px 6px rgba(0,0,0,0.5);
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -26,6 +27,7 @@
             background-color: var(--bg-color);
             color: var(--text-color);
             line-height: 1.6;
+            transition: all 0.3s ease;
             padding-bottom: 50px;
         }
         header {
@@ -36,9 +38,9 @@
             box-shadow: var(--shadow);
             position: relative;
         }
-        h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
+        h1 { font-size: 2.5rem; margin-bottom: 0.5rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
         p.subtitle { font-size: 1.1rem; opacity: 0.9; }
-        .container { max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
+        .container { max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
         .card {
             background: var(--card-bg);
             padding: 2rem;
@@ -58,9 +60,10 @@
             cursor: pointer;
             font-size: 1.2rem;
         }
+        .theme-toggle:hover { transform: scale(1.1); }
         .form-group { margin-bottom: 1.5rem; }
         label { display: block; margin-bottom: 0.5rem; font-weight: bold; }
-        input[type="date"] {
+        input {
             width: 100%;
             padding: 12px;
             border: 2px solid #ddd;
@@ -70,8 +73,7 @@
             color: var(--text-color);
         }
         input:focus { outline: none; border-color: var(--primary); }
-        .error-msg { color: #e74c3c; font-size: 0.85rem; margin-top: 5px; display: none; }
-        .btn-primary {
+        button.btn-primary {
             width: 100%;
             padding: 15px;
             background: var(--primary);
@@ -82,11 +84,10 @@
             font-weight: bold;
             cursor: pointer;
         }
-        .btn-primary:hover { background: #b5952f; }
-        .btn-primary:disabled { background: #ccc; cursor: not-allowed; }
+        button.btn-primary:hover { background: #b5952f; }
         .results-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 1.5rem;
             margin-top: 2rem;
         }
@@ -96,13 +97,41 @@
             border-radius: 10px;
             text-align: center;
             box-shadow: var(--shadow);
+            border: 2px solid transparent;
             cursor: pointer;
-            border: 2px solid var(--primary);
+            transition: transform 0.3s, box-shadow 0.3s;
         }
-        .result-item:hover { transform: translateY(-5px); box-shadow: 0 8px 15px rgba(0,0,0,0.15); }
+        .result-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.15);
+            border-color: var(--primary);
+        }
+        .result-item.main { border-color: var(--primary); background: rgba(212,175,55,0.1); }
         .glyph { font-size: 3rem; margin-bottom: 0.5rem; display: block; }
-        .title { font-weight: bold; color: var(--secondary); font-size: 1.1rem; }
-        .desc { font-size: 0.9rem; margin-top: 0.5rem; color: #666; }
+        .position { font-size: 0.85rem; color: var(--accent); font-weight: bold; text-transform: uppercase; }
+        .title { font-weight: bold; color: var(--secondary); font-size: 1.2rem; margin: 0.5rem 0; }
+        [data-theme="dark"] .title { color: var(--primary); }
+        .desc { font-size: 0.9rem; color: #666; }
+        [data-theme="dark"] .desc { color: #aaa; }
+        .actions-bar {
+            display: flex;
+            gap: 10px;
+            margin-top: 1.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .btn-secondary {
+            padding: 10px 20px;
+            background: transparent;
+            border: 2px solid var(--secondary);
+            color: var(--secondary);
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        [data-theme="dark"] .btn-secondary { border-color: var(--primary); color: var(--primary); }
+        .btn-secondary:hover { background: var(--secondary); color: white; }
+        [data-theme="dark"] .btn-secondary:hover { background: var(--primary); color: black; }
         .modal {
             display: none;
             position: fixed;
@@ -121,228 +150,205 @@
             max-width: 500px;
             width: 90%;
             position: relative;
+            max-height: 90vh;
+            overflow-y: auto;
         }
         .close-modal {
-            position: absolute; top: 10px; right: 15px;
-            font-size: 1.5rem; cursor: pointer;
-        }
-        .actions-bar { display: flex; gap: 10px; margin-top: 1rem; justify-content: center; }
-        .btn-secondary {
-            padding: 8px 16px;
-            background: transparent;
-            border: 2px solid var(--secondary);
-            color: var(--secondary);
-            border-radius: 6px;
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 1.5rem;
             cursor: pointer;
-            font-weight: bold;
         }
-        .btn-secondary:hover { background: var(--secondary); color: white; }
-        .history-section { margin-top: 2rem; border-top: 1px solid #ddd; padding-top: 1rem; }
-        .history-list { list-style: none; }
-        .history-item {
-            padding: 10px;
-            border-bottom: 1px solid #eee;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
+        @media (max-width: 600px) {
+            h1 { font-size: 1.8rem; }
+            .results-grid { grid-template-columns: 1fr; }
         }
-        @media (max-width: 600px) { h1 { font-size: 1.8rem; } .results-grid { grid-template-columns: 1fr; } }
+        @media print {
+            .theme-toggle, .actions-bar, form { display: none; }
+            body { background: white; color: black; }
+            .card { box-shadow: none; border: 1px solid #ccc; }
+        }
     </style>
 </head>
 <body>
 <header>
     <button class="theme-toggle" id="themeToggle" aria-label="Cambiar tema">🌙</button>
-    <h1>Calculadora de Cruz Maya</h1>
-    <p class="subtitle">Descubre tu energía ancestral del Tzolkin</p>
+    <h1>🌿 Cruz Maya</h1>
+    <p class="subtitle">Calculadora de Nacimiento Tzolkin</p>
 </header>
-<main id="main-content" class="container">
+
+<main class="container">
     <section class="card">
         <h2 style="margin-bottom: 1.5rem; text-align: center;">Ingresa tu fecha de nacimiento</h2>
         <form id="mayaForm">
             <div class="form-group">
                 <label for="birthdate">Fecha:</label>
                 <input type="date" id="birthdate" required>
-                <span id="date-error" class="error-msg">Por favor ingresa una fecha válida.</span>
             </div>
-            <button type="submit" class="btn-primary" id="calcBtn">Calcular mi Cruz Maya</button>
+            <button type="submit" class="btn-primary">Calcular Cruz</button>
         </form>
+
         <div id="results" class="results-grid"></div>
-        <div id="actionArea" style="display:none; margin-top: 20px;">
+
+        <div id="actionArea" style="display:none;">
             <div class="actions-bar">
                 <button class="btn-secondary" onclick="shareResult()">📤 Compartir</button>
-                <button class="btn-secondary" onclick="window.print()">🖨️ Imprimir</button>
+                <button class="btn-secondary" onclick="window.print()">🖨️ Imprimir / PDF</button>
             </div>
         </div>
     </section>
-    <section class="card history-section" id="historySection" style="display:none;">
-        <h3>🕒 Historial Reciente</h3>
-        <ul class="history-list" id="historyList"></ul>
-        <button class="btn-secondary" style="margin-top:10px;" onclick="clearHistory()">Borrar historial</button>
-    </section>
 </main>
+
 <div id="detailModal" class="modal">
     <div class="modal-content">
         <span class="close-modal" onclick="closeModal()">&times;</span>
         <h2 id="modalTitle" style="color: var(--primary); margin-bottom: 1rem;"></h2>
         <div id="modalGlyph" style="font-size: 4rem; text-align: center; margin-bottom: 1rem;"></div>
-        <p id="modalDesc" style="line-height: 1.8;"></p>
-        <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #eee;">
+        <p id="modalDesc" style="line-height: 1.8; margin-bottom: 1rem;"></p>
+        <div style="padding-top: 1rem; border-top: 1px solid #eee;">
             <strong>Elemento:</strong> <span id="modalElement"></span><br>
             <strong>Dirección:</strong> <span id="modalDirection"></span>
         </div>
     </div>
 </div>
+
 <script>
-const NAWALES = [
-    { id: 1, name: "Imix", glyph: "🐊", element: "Agua", direction: "Este", desc: "El inicio, la creatividad, el origen de la vida." },
-    { id: 2, name: "Ik'", glyph: "💨", element: "Aire", direction: "Norte", desc: "El viento, la comunicación, el espíritu." },
-    { id: 3, name: "Ak'b'al", glyph: "🌑", element: "Tierra", direction: "Oeste", desc: "La noche, lo oculto, los sueños." },
-    { id: 4, name: "K'an", glyph: "🌽", element: "Fuego", direction: "Sur", desc: "La semilla, la abundancia, el conocimiento." },
-    { id: 5, name: "Chikchan", glyph: "🐍", element: "Fuego", direction: "Sur", desc: "La serpiente, la energía vital, la sabiduría." },
-    { id: 6, name: "Kimi", glyph: "💀", element: "Tierra", direction: "Oeste", desc: "La muerte, la transformación, el renacer." },
-    { id: 7, name: "Manik'", glyph: "🦌", element: "Tierra", direction: "Oeste", desc: "El ciervo, la provisión, la sanación." },
-    { id: 8, name: "Lamat", glyph: "⭐", element: "Fuego", direction: "Sur", desc: "La estrella, la belleza, el arte." },
-    { id: 9, name: "Muluk", glyph: "💧", element: "Agua", direction: "Este", desc: "El agua, la purificación, las emociones." },
-    { id: 10, name: "Ok", glyph: "🐕", element: "Tierra", direction: "Oeste", desc: "El perro, la lealtad, el amor incondicional." },
-    { id: 11, name: "Chuwen", glyph: "🧵", element: "Tierra", direction: "Oeste", desc: "El mono, la creación, el tejido del destino." },
-    { id: 12, name: "Eb'", glyph: "🦷", element: "Aire", direction: "Norte", desc: "El camino, el diente, la perseverancia." },
-    { id: 13, name: "B'en", glyph: "🌽", element: "Fuego", direction: "Sur", desc: "El maíz, la fuerza vital, la comunidad." },
-    { id: 14, name: "Ix", glyph: "🐆", element: "Tierra", direction: "Oeste", desc: "El jaguar, la magia, el poder femenino." },
-    { id: 15, name: "Men", glyph: "🦅", element: "Aire", direction: "Norte", desc: "El águila, la visión, la libertad." },
-    { id: 16, name: "Kib'", glyph: "🕯️", element: "Tierra", direction: "Oeste", desc: "El búho, la intuición, la luz interior." },
-    { id: 17, name: "Kab'an", glyph: "🌍", element: "Tierra", direction: "Oeste", desc: "La tierra, el movimiento, la evolución." },
-    { id: 18, name: "Etz'nab'", glyph: "🗡️", element: "Aire", direction: "Norte", desc: "El cuchillo, la verdad, la precisión." },
-    { id: 19, name: "Kawak", glyph: "⛈️", element: "Agua", direction: "Este", desc: "La tormenta, la renovación, la prueba." },
-    { id: 20, name: "Ajaw", glyph: "👑", element: "Fuego", direction: "Sur", desc: "El sol, el liderazgo, la iluminación." }
-];
-const form = document.getElementById('mayaForm');
-const dateInput = document.getElementById('birthdate');
-const resultsDiv = document.getElementById('results');
-const themeToggle = document.getElementById('themeToggle');
-const modal = document.getElementById('detailModal');
-const historySection = document.getElementById('historySection');
-const historyList = document.getElementById('historyList');
-const calcBtn = document.getElementById('calcBtn');
+    const NAWALES = [
+        { id: 1, name: "Imox", glyph: "🐊", element: "Agua", direction: "Este", desc: "El inicio, la creatividad desbordante, el origen de la vida." },
+        { id: 2, name: "Iq'", glyph: "💨", element: "Aire", direction: "Norte", desc: "El viento, la comunicación, el espíritu vital." },
+        { id: 3, name: "Aq'ab'al", glyph: "🌑", element: "Tierra", direction: "Oeste", desc: "La noche, lo oculto, los sueños." },
+        { id: 4, name: "K'at", glyph: "🕸️", element: "Fuego", direction: "Sur", desc: "La red, el tejido del destino." },
+        { id: 5, name: "Kan", glyph: "🌱", element: "Fuego", direction: "Sur", desc: "La semilla, la potencialidad." },
+        { id: 6, name: "Keme", glyph: "💀", element: "Tierra", direction: "Oeste", desc: "La muerte, transformación, renacimiento." },
+        { id: 7, name: "Keej", glyph: "🦌", element: "Tierra", direction: "Oeste", desc: "El ciervo, provisión, sanación." },
+        { id: 8, name: "Q'anil", glyph: "⭐", element: "Fuego", direction: "Sur", desc: "La estrella, belleza, arte." },
+        { id: 9, name: "Toj", glyph: "💧", element: "Agua", direction: "Este", desc: "La ofrenda, reciprocidad cósmica." },
+        { id: 10, name: "T'zi'", glyph: "🐕", element: "Tierra", direction: "Oeste", desc: "El perro, lealtad, amor incondicional." },
+        { id: 11, name: "B'atz'", glyph: "🧵", element: "Tierra", direction: "Oeste", desc: "El mono, tejedor del destino." },
+        { id: 12, name: "E", glyph: "🦷", element: "Aire", direction: "Norte", desc: "El camino, perseverancia, viaje." },
+        { id: 13, name: "Aj", glyph: "🌽", element: "Fuego", direction: "Sur", desc: "El maíz, fuerza vital, comunidad." },
+        { id: 14, name: "I'x", glyph: "🐆", element: "Tierra", direction: "Oeste", desc: "El jaguar, magia, poder femenino." },
+        { id: 15, name: "Tz'ikin", glyph: "🦅", element: "Aire", direction: "Norte", desc: "El ave, visión, libertad." },
+        { id: 16, name: "Ajmaq", glyph: "🕯️", element: "Tierra", direction: "Oeste", desc: "El búho, intuición, sabiduría." },
+        { id: 17, name: "No'j", glyph: "🧠", element: "Tierra", direction: "Oeste", desc: "La mente, pensamiento, inteligencia." },
+        { id: 18, name: "Tijax", glyph: "🗡️", element: "Aire", direction: "Norte", desc: "El cuchillo, verdad, precisión." },
+        { id: 19, name: "Kawoq", glyph: "⛈️", element: "Agua", direction: "Este", desc: "La tormenta, renovación, cambio." },
+        { id: 20, name: "Ajpu", glyph: "👑", element: "Fuego", direction: "Sur", desc: "El guerrero solar, liderazgo, iluminación." }
+    ];
 
-document.addEventListener('DOMContentLoaded', () => {
-    loadTheme();
-    loadHistory();
-});
+    const CRUZ_POSITIONS = [
+        { name: "Nacimiento", offset: 0, desc: "Esencia y personalidad" },
+        { name: "Origen", offset: -9, desc: "Raíces, de dónde vienes" },
+        { name: "Destino", offset: +9, desc: "Misión de vida" },
+        { name: "Izquierda", offset: -7, desc: "Lo femenino, desafíos" },
+        { name: "Derecha", offset: +7, desc: "Lo masculino, dones" },
+        { name: "Auxiliar 1", offset: -1, desc: "Soporte inmediato anterior" },
+        { name: "Auxiliar 2", offset: +1, desc: "Soporte inmediato siguiente" },
+        { name: "Auxiliar 3", offset: -2, desc: "Segundo apoyo en retroceso" },
+        { name: "Auxiliar 4", offset: +2, desc: "Segundo apoyo en avance" }
+    ];
 
-function loadTheme() {
+    const form = document.getElementById('mayaForm');
+    const dateInput = document.getElementById('birthdate');
+    const resultsDiv = document.getElementById('results');
+    const themeToggle = document.getElementById('themeToggle');
+    const modal = document.getElementById('detailModal');
+
+    // Theme
     const savedTheme = localStorage.getItem('mayaTheme') || 'light';
     document.documentElement.setAttribute('data-theme', savedTheme);
     themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
-}
 
-themeToggle.addEventListener('click', () => {
-    const current = document.documentElement.getAttribute('data-theme');
-    const next = current === 'dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', next);
-    localStorage.setItem('mayaTheme', next);
-    themeToggle.textContent = next === 'dark' ? '☀️' : '🌙';
-});
+    themeToggle.addEventListener('click', () => {
+        const current = document.documentElement.getAttribute('data-theme');
+        const next = current === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('mayaTheme', next);
+        themeToggle.textContent = next === 'dark' ? '☀️' : '🌙';
+    });
 
-form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    if (!dateInput.value) {
-        document.getElementById('date-error').style.display = 'block';
-        return;
+    function getJulianDay(date) {
+        let Y = date.getFullYear();
+        let M = date.getMonth() + 1;
+        let D = date.getDate();
+        if (M <= 2) { Y -= 1; M += 12; }
+        const A = Math.floor(Y / 100);
+        const B = 2 - A + Math.floor(A / 4);
+        return Math.floor(365.25 * (Y + 4716)) + Math.floor(30.6001 * (M + 1)) + D + B - 1524.5;
     }
-    document.getElementById('date-error').style.display = 'none';
-    calcBtn.disabled = true;
-    calcBtn.textContent = 'Calculando...';
-    setTimeout(() => {
+
+    function calculateTzolkin(date) {
+        const JDN = getJulianDay(date);
+        const baseJDN = getJulianDay(new Date('1971-08-11'));
+        const offset = JDN - baseJDN;
+
+        let tone = ((4 - 1 + offset) % 13);
+        if (tone < 0) tone += 13;
+        tone += 1;
+
+        let nawalIndex = ((19 + offset) % 20);
+        if (nawalIndex < 0) nawalIndex += 20;
+
+        return { tone, nawal: NAWALES[nawalIndex], baseIndex: nawalIndex };
+    }
+
+    function getCruzPositions(baseIndex, baseTone) {
+        return CRUZ_POSITIONS.map(pos => {
+            let nIndex = (baseIndex + pos.offset) % 20;
+            if (nIndex < 0) nIndex += 20;
+            
+            let nTone = ((baseTone - 1 + pos.offset) % 13);
+            if (nTone < 0) nTone += 13;
+            nTone += 1;
+
+            return { ...pos, tone: nTone, nawal: NAWALES[nIndex] };
+        });
+    }
+
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (!dateInput.value) return alert("Selecciona una fecha");
+
         const date = new Date(dateInput.value + 'T00:00:00');
-        const result = calculateTzolkin(date);
-        renderResults(result);
-        saveToHistory(dateInput.value, result);
-        calcBtn.disabled = false;
-        calcBtn.textContent = 'Calcular mi Cruz Maya';
+        const base = calculateTzolkin(date);
+        const cruz = getCruzPositions(base.baseIndex, base.tone);
+
+        resultsDiv.innerHTML = '';
+        cruz.forEach((pos, idx) => {
+            const div = document.createElement('div');
+            div.className = 'result-item' + (idx === 0 ? ' main' : '');
+            div.innerHTML = `
+                <span class="glyph">${pos.nawal.glyph}</span>
+                <div class="position">${pos.name}</div>
+                <div class="title">${pos.tone} ${pos.nawal.name}</div>
+                <div class="desc">${pos.nawal.element} - ${pos.nawal.direction}</div>
+            `;
+            div.onclick = () => openModal(pos);
+            resultsDiv.appendChild(div);
+        });
+
         document.getElementById('actionArea').style.display = 'block';
         resultsDiv.scrollIntoView({ behavior: 'smooth' });
-    }, 600);
-});
-
-function calculateTzolkin(date) {
-    const JDN = getJulianDay(date);
-    const baseJDN = getJulianDay(new Date('1971-08-11'));
-    const offset = JDN - baseJDN;
-    let tone = ((4 - 1 + offset) % 13);
-    if (tone < 0) tone += 13;
-    tone += 1;
-    let nawalIndex = ((19 + offset) % 20);
-    if (nawalIndex < 0) nawalIndex += 20;
-    return { tone: tone, nawal: NAWALES[nawalIndex], fullDate: date.toLocaleDateString() };
-}
-
-function getJulianDay(date) {
-    let Y = date.getFullYear(), M = date.getMonth() + 1, D = date.getDate();
-    if (M <= 2) { Y -= 1; M += 12; }
-    const A = Math.floor(Y / 100);
-    const B = 2 - A + Math.floor(A / 4);
-    return Math.floor(365.25 * (Y + 4716)) + Math.floor(30.6001 * (M + 1)) + D + B - 1524.5;
-}
-
-function renderResults(data) {
-    resultsDiv.innerHTML = '';
-    const mainCard = document.createElement('div');
-    mainCard.className = 'result-item';
-    mainCard.innerHTML = '<span class="glyph">' + data.nawal.glyph + '</span><div class="title">' + data.tone + ' ' + data.nawal.name + '</div><div class="desc">' + data.nawal.element + ' - ' + data.nawal.direction + '</div><div style="font-size:0.8rem; margin-top:5px; color:var(--accent)">Haz clic para más detalles</div>';
-    mainCard.onclick = () => openModal(data.nawal, data.tone);
-    resultsDiv.appendChild(mainCard);
-    const infoCard = document.createElement('div');
-    infoCard.className = 'result-item';
-    infoCard.style.border = '1px solid #ddd';
-    infoCard.innerHTML = '<span class="glyph">📅</span><div class="title">Fecha Gregoriana</div><div class="desc">' + data.fullDate + '</div>';
-    resultsDiv.appendChild(infoCard);
-}
-
-window.openModal = function(nawal, tone) {
-    document.getElementById('modalTitle').textContent = tone + ' ' + nawal.name;
-    document.getElementById('modalGlyph').textContent = nawal.glyph;
-    document.getElementById('modalDesc').textContent = nawal.desc;
-    document.getElementById('modalElement').textContent = nawal.element;
-    document.getElementById('modalDirection').textContent = nawal.direction;
-    modal.classList.add('show');
-};
-
-window.closeModal = function() { modal.classList.remove('show'); };
-window.onclick = function(event) { if (event.target == modal) closeModal(); };
-
-function saveToHistory(dateStr, result) {
-    let history = JSON.parse(localStorage.getItem('mayaHistory') || '[]');
-    const entry = { date: dateStr, tone: result.tone, nawalName: result.nawal.name };
-    if (history.length > 0 && JSON.stringify(history[0]) === JSON.stringify(entry)) return;
-    history.unshift(entry);
-    if (history.length > 10) history.pop();
-    localStorage.setItem('mayaHistory', JSON.stringify(history));
-    loadHistory();
-}
-
-function loadHistory() {
-    const history = JSON.parse(localStorage.getItem('mayaHistory') || '[]');
-    historyList.innerHTML = '';
-    if (history.length === 0) { historySection.style.display = 'none'; return; }
-    historySection.style.display = 'block';
-    history.forEach(item => {
-        const li = document.createElement('li');
-        li.className = 'history-item';
-        li.innerHTML = '<span>' + item.date + '</span> <strong>' + item.tone + ' ' + item.nawalName + '</strong>';
-        li.onclick = () => { dateInput.value = item.date; form.dispatchEvent(new Event('submit')); };
-        historyList.appendChild(li);
     });
-}
 
-window.clearHistory = function() { localStorage.removeItem('mayaHistory'); loadHistory(); };
+    function openModal(pos) {
+        document.getElementById('modalTitle').textContent = `${pos.name}: ${pos.tone} ${pos.nawal.name}`;
+        document.getElementById('modalGlyph').textContent = pos.nawal.glyph;
+        document.getElementById('modalDesc').textContent = pos.nawal.desc;
+        document.getElementById('modalElement').textContent = pos.nawal.element;
+        document.getElementById('modalDirection').textContent = pos.nawal.direction;
+        modal.classList.add('show');
+    }
 
-window.shareResult = async function() {
-    const lastItem = JSON.parse(localStorage.getItem('mayaHistory') || '[]')[0];
-    if (!lastItem) return alert("No hay resultados recientes");
-    const text = 'Mi energía Maya es ' + lastItem.tone + ' ' + lastItem.nawalName + '. ¡Descubre la tuya!';
-    if (navigator.share) { try { await navigator.share({ title: 'Mi Cruz Maya', text: text }); } catch (err) {} }
-    else { navigator.clipboard.writeText(text); alert("Texto copiado: " + text); }
-};
+    function closeModal() { modal.classList.remove('show'); }
+    window.onclick = (e) => { if (e.target == modal) closeModal(); };
+
+    async function shareResult() {
+        const text = "Mi Cruz Maya ha sido calculada. ¡Descubre tu energía ancestral!";
+        if (navigator.share) { try { await navigator.share({ title: 'Cruz Maya', text }); } catch(e) {} }
+        else { navigator.clipboard.writeText(text); alert("Texto copiado: " + text); }
+    }
 </script>
 </body>
 </html>
